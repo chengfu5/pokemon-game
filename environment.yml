@@ -1,0 +1,16 @@
+name: pokemon
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12
+  - requests>=2.31.0
+  - pandas
+  - scikit-learn
+  - xgboost
+  - joblib
+  - fastapi
+  - uvicorn
+  - pip
+  - pip:
+      - pygame-ce

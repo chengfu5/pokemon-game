@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pokemon AI Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #222; color: white; display: flex; justify-content: center; margin-top: 20px; }
+        #lobby-screen { width: 90vw; max-width: 1200px; background: #111; padding: 30px; border-radius: 10px; border: 4px solid #444; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px; max-height: 65vh; overflow-y: auto; background: #333; padding: 20px; border: 2px solid #555; }
+        .poke-card { border: 2px solid #555; text-align: center; cursor: pointer; border-radius: 8px; background: #444; padding: 10px; transition: transform 0.1s; }
+        .poke-card:hover { transform: scale(1.05); background-color: #666; }
+        .selected { background-color: #4caf50 !important; color: white; border-color: #81c784; }
+        
+        /* THE 800x600 DS SCREEN REPLICA */
+        #ds-screen { display: none; width: 800px; height: 600px; background: white; border: 4px solid black; position: relative; color: black; box-sizing: border-box; }
+        
+        /* UI State Layers */
+        #arena-layer, #switch-layer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        #switch-layer { display: none; background: white; z-index: 10; padding: 20px; box-sizing: border-box; }
+        
+        /* Sprites & Shadows */
+        .shadow { position: absolute; background: #dcdcdc; border-radius: 50%; }
+        #e-shadow { width: 180px; height: 40px; top: 220px; left: 550px; }
+        #p-shadow { width: 220px; height: 50px; top: 380px; left: 100px; }
+        #e-sprite { position: absolute; width: 240px; top: 20px; left: 520px; }
+        #p-sprite { position: absolute; width: 288px; top: 130px; left: 60px; }
+        
+        /* HUD Boxes */
+        .hud-box { position: absolute; background: #eee; border: 3px solid black; border-radius: 10px; padding: 10px; width: 300px; box-sizing: border-box; }
+        #e-hud { top: 30px; left: 30px; }
+        #p-hud { top: 320px; left: 450px; }
+        .hud-top { display: flex; justify-content: space-between; font-weight: bold; font-size: 20px; margin-bottom: 5px; }
+        .hp-bar-bg { width: 200px; height: 15px; background: #646464; border: 2px solid black; position: relative; }
+        .hp-bar-fill { height: 100%; background: #32c832; width: 100%; transition: width 0.3s; }
+        .hp-text { position: absolute; right: -70px; top: -2px; font-size: 14px; font-weight: bold; }
+        
+        /* ML Tracker */
+        #ml-tracker { position: absolute; top: 10px; left: 280px; background: #9632c8; color: white; padding: 5px 15px; border: 2px solid black; border-radius: 10px; font-weight: bold; z-index: 5; }
+
+        /* Bottom Menu (150px) */
+        #bottom-menu { position: absolute; bottom: 0; left: 0; width: 800px; height: 150px; background: #eee; border-top: 5px solid black; display: flex; box-sizing: border-box; }
+        #msg-box { flex: 1; padding: 20px; font-size: 24px; font-weight: bold; }
+        #control-box { width: 350px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        button { font-size: 18px; font-weight: bold; border: 2px solid black; border-radius: 5px; cursor: pointer; background: white; }
+        button:hover:not(:disabled) { opacity: 0.8; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .btn-fight { background: #dc3232; color: white; }
+        .btn-switch { background: #3264c8; color: white; }
+        .btn-back { background: #646464; color: white; }
+
+        /* Switch Menu Grid */
+        #party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .party-btn { padding: 15px; text-align: left; background: white; border: 3px solid black; border-radius: 10px; cursor: pointer; }
+        .party-btn.fainted { background: #ffcccc; cursor: not-allowed; }
+        .party-btn.active { background: #ccffcc; }
+    </style>
+</head>
+<body>
+
+    <div id="lobby-screen">
+        <h1>Draft Your Team (Choose 6)</h1>
+        <h3 id="draft-count">Selected: 0 / 6</h3>
+        <div class="grid" id="pokedex-grid"></div>
+        <br><br>
+        <select id="opponent-select" style="font-size: 18px; padding: 5px;"></select>
+        <button onclick="startBattle()" style="padding: 10px; background: #4caf50; color: white;">START BATTLE</button>
+    </div>
+
+    <div id="ds-screen">
+        <div id="ml-tracker">ML Win Prob: --%</div>
+        
+        <div id="arena-layer">
+            <div id="e-shadow" class="shadow"></div>
+            <img id="e-sprite" src="">
+            <div id="e-hud" class="hud-box">
+                <div class="hud-top"><span id="e-name"></span> <span>Lv.100</span></div>
+                <div class="hp-bar-bg"><div id="e-hp-fill" class="hp-bar-fill"></div></div>
+            </div>
+
+            <div id="p-shadow" class="shadow"></div>
+            <img id="p-sprite" src="">
+            <div id="p-hud" class="hud-box">
+                <div class="hud-top"><span id="p-name"></span> <span>Lv.100</span></div>
+                <div class="hp-bar-bg"><div id="p-hp-fill" class="hp-bar-fill"></div><div id="p-hp-txt" class="hp-text"></div></div>
+            </div>
+        </div>
+
+        <div id="switch-layer">
+            <h2>Choose a Pokemon</h2>
+            <div id="party-grid"></div>
+            <button class="btn-back" id="switch-back-btn" onclick="setMenuState('main')" style="position:absolute; bottom:20px; right:20px; padding:15px 30px;">BACK</button>
+        </div>
+
+        <div id="bottom-menu">
+            <div id="msg-box">What will you do?</div>
+            <div id="control-box"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
