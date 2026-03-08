@@ -473,3 +473,4 @@ Each generation would require updating the type chart (Fairy type), fetching new
 - **Pokemon Data & Sprites** — [PokeAPI](https://pokeapi.co/) (RESTful Pokemon data API)
 - **Type Chart** — Gen 4 official type effectiveness chart
 - **Competitive References** — [Smogon](https://www.smogon.com/) (competitive Pokemon community)
+- **Bulbapedia** - General Pokemon reference site
